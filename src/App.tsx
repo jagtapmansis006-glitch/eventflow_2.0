@@ -26,13 +26,16 @@ import { DesktopLayout } from './components/DesktopLayout';
 import { AttendeeDashboard } from './components/AttendeeDashboard';
 import { AttendeeLoginModal } from './components/AttendeeLoginModal';
 import { ZPIEngineView } from './components/ZPIEngineView';
+import { PrescriptiveOptimizerView } from './components/PrescriptiveOptimizerView';
 import { computeZPI } from './engine/fusionEngine';
+import { PrescribedIntervention } from './types';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<TabType>('home');
   const [userMode, setUserMode] = useState<'operator' | 'attendee'>('operator');
   const [isAttendeeLoginOpen, setIsAttendeeLoginOpen] = useState<boolean>(false);
   const [isZPIEngineOpen, setIsZPIEngineOpen] = useState<boolean>(false);
+  const [isOptimizerOpen, setIsOptimizerOpen] = useState<boolean>(false);
   const [zones, setZones] = useState<Zone[]>(INITIAL_ZONES);
   const [gates, setGates] = useState<Gate[]>(INITIAL_GATES);
   const [transports, setTransports] = useState<TransportHub[]>(INITIAL_TRANSPORTS);
@@ -176,6 +179,120 @@ export default function App() {
     ]);
   };
 
+  // Handler: Applying MILP Prescribed Intervention from OR-Tools
+  const handleApplyPrescribedIntervention = (intervention: PrescribedIntervention) => {
+    setInterventionApplied(true);
+
+    if (intervention.category === 'gate_diversion') {
+      handleApplyIntervention('action-1', intervention.totalAttendeesAffected || 1800);
+    } else if (intervention.category === 'transit_headway') {
+      setTransports((prev) =>
+        prev.map((t) =>
+          t.id === 'trans-station'
+            ? { ...t, loadPercentage: 78, status: 'SAFE' }
+            : t.id === 'trans-shuttle'
+            ? { ...t, loadPercentage: 86, details: '8 EV shuttles active in high-frequency circuit' }
+            : t
+        )
+      );
+      setAlerts((prev) => [
+        {
+          id: `alert-${Date.now()}`,
+          level: 'INFO',
+          title: 'Transit Headway Policy Enacted: Route 104 Compressed to 4m',
+          subtitle: '4 electric shuttles deployed from reserve fleet. Station platform pressure eased by 13%.',
+          timestamp: 'Just now',
+          actionText: 'CONFIRMED',
+        },
+        ...prev,
+      ]);
+    } else if (intervention.category === 'holding_buffer') {
+      setZones((prev) =>
+        prev.map((z) =>
+          z.id === 'zone-e'
+            ? { ...z, occupancy: z.occupancy + 400, pressure: 48 }
+            : z.id === 'zone-a'
+            ? { ...z, pressure: Math.max(68, z.pressure - 6), inflow: z.inflow - 25 }
+            : z
+        )
+      );
+      setAlerts((prev) => [
+        {
+          id: `alert-${Date.now()}`,
+          level: 'INFO',
+          title: 'Peripheral Holding Buffer Activated: Grand Lounge B',
+          subtitle: '400 attendees buffered in partner hospitality lounge with digital refresh vouchers.',
+          timestamp: 'Just now',
+          actionText: 'CONFIRMED',
+        },
+        ...prev,
+      ]);
+    } else {
+      handleApplyIntervention('action-1', 1800);
+    }
+  };
+
+  const handleApplyAllPrescriptions = (prescriptions: PrescribedIntervention[]) => {
+    setInterventionApplied(true);
+
+    // Apply all multi-agency levers simultaneously
+    setZones((prev) =>
+      prev.map((z) => {
+        if (z.id === 'zone-a') {
+          return {
+            ...z,
+            pressure: 67,
+            projectedPressure: 69,
+            criticalInMinutes: 240,
+            gateQueueMin: 6,
+            inflow: 160,
+            status: 'SAFE',
+          };
+        }
+        if (z.id === 'zone-e') {
+          return { ...z, occupancy: z.occupancy + 400, pressure: 48 };
+        }
+        return z;
+      })
+    );
+
+    setGates((prev) =>
+      prev.map((g) => {
+        if (g.id === 'gate-3') {
+          return { ...g, queueMin: 11, capacity: 66, status: 'MODERATE' };
+        }
+        if (g.id === 'gate-1') {
+          return { ...g, queueMin: 8, capacity: 62, status: 'AVAILABLE' };
+        }
+        return g;
+      })
+    );
+
+    setTransports((prev) =>
+      prev.map((t) =>
+        t.id === 'trans-station'
+          ? { ...t, loadPercentage: 76, status: 'SAFE' }
+          : t.id === 'trans-shuttle'
+          ? { ...t, loadPercentage: 86, details: '8 EV shuttles active in high-frequency circuit' }
+          : t
+      )
+    );
+
+    setActions((prev) => prev.map((a) => ({ ...a, status: 'applied' })));
+
+    setAlerts((prev) => [
+      {
+        id: `alert-${Date.now()}`,
+        level: 'INFO',
+        title: 'Full Multi-Agency Prescription Enacted via OR-Tools MILP',
+        subtitle: 'Bridges gates (25% divert), Route 104 transit headways (4m), and Lounge B holding buffer.',
+        timestamp: 'Just now',
+        actionText: 'ENACTED',
+      },
+      ...prev.filter((a) => a.id !== 'alert-1'),
+    ]);
+  };
+
   // Handler: Respond to alert
   const handleRespondToAlert = (alert: SystemAlert) => {
     if (alert.zoneId) {
@@ -199,6 +316,7 @@ export default function App() {
     setSelectedZone(null);
     setIsBottomSheetOpen(false);
     setIsSimulationOpen(false);
+    setIsOptimizerOpen(false);
   };
 
   const criticalZone = zones.find((z) => z.id === 'zone-a') || zones[0];
@@ -209,22 +327,56 @@ export default function App() {
   return (
     <div className="w-full min-h-screen bg-[#0a0a0c] text-white flex flex-col font-sans selection:bg-blue-600 selection:text-white">
       {/* 1. DESKTOP VIEW (Displayed on screens >= 1024px) */}
-      <DesktopLayout
-        zones={zones}
-        gates={gates}
-        transports={transports}
-        hotels={hotels}
-        actions={actions}
-        alerts={alerts}
-        selectedZone={selectedZone || criticalZone}
-        onSelectZone={handleSelectZone}
-        onSimulateAction={handleTriggerSimulation}
-        onOpenAlerts={() => setCurrentTab('alerts')}
-        onResetDemo={handleResetDemo}
-        liveTime={liveTime}
-        onOpenAttendeeAccess={() => setIsAttendeeLoginOpen(true)}
-        onOpenZPIEngine={() => setIsZPIEngineOpen(true)}
-      />
+      {userMode === 'attendee' ? (
+        <div className="hidden lg:flex flex-col w-full min-h-screen bg-[#0a0a0c]">
+          <div className="bg-blue-950/40 border-b border-blue-500/30 px-6 py-2.5 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs text-blue-300 font-mono">
+              <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+              <span>DESKTOP ATTENDEE EXPERIENCE ACTIVE • Mumbai MegaFest Live Companion</span>
+            </div>
+            <button
+              onClick={() => setUserMode('operator')}
+              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition"
+            >
+              Return to Operator Command Center
+            </button>
+          </div>
+          <div className="max-w-4xl w-full mx-auto p-6">
+            <AttendeeDashboard
+              zones={zones}
+              gates={gates}
+              transports={transports}
+              hotels={hotels}
+              actions={actions}
+              liveTime={liveTime}
+              onSwitchToOperator={() => setUserMode('operator')}
+              onSimulateAction={handleTriggerSimulation}
+              interventionApplied={interventionApplied}
+            />
+          </div>
+        </div>
+      ) : (
+        <DesktopLayout
+          zones={zones}
+          gates={gates}
+          transports={transports}
+          hotels={hotels}
+          actions={actions}
+          alerts={alerts}
+          selectedZone={selectedZone || criticalZone}
+          onSelectZone={handleSelectZone}
+          onSimulateAction={handleTriggerSimulation}
+          onOpenAlerts={() => setCurrentTab('alerts')}
+          onResetDemo={handleResetDemo}
+          liveTime={liveTime}
+          onOpenAttendeeAccess={() => setIsAttendeeLoginOpen(true)}
+          onOpenZPIEngine={() => setIsZPIEngineOpen(true)}
+          onOpenOptimizer={() => setIsOptimizerOpen(true)}
+          onApplyPrescribedIntervention={handleApplyPrescribedIntervention}
+          onApplyAllPrescriptions={handleApplyAllPrescriptions}
+          interventionApplied={interventionApplied}
+        />
+      )}
 
       {/* 2. DEDICATED MOBILE VIEW (Strictly active on mobile screens <= 1023px, designed specifically for 390x844 and 412x915) */}
       <div className="lg:hidden flex flex-col w-full min-h-screen bg-[#0a0a0c] overflow-x-hidden relative">
@@ -320,6 +472,7 @@ export default function App() {
                   zones={zones}
                   gates={gates}
                   transports={transports}
+                  onOpenOptimizer={() => setIsOptimizerOpen(true)}
                 />
               )}
 
@@ -331,6 +484,7 @@ export default function App() {
                   onToggleSimulating={() => setIsSimulatingTelemetry((prev) => !prev)}
                   onOpenAttendeeAccess={() => setIsAttendeeLoginOpen(true)}
                   onOpenZPIEngine={() => setIsZPIEngineOpen(true)}
+                  onOpenOptimizer={() => setIsOptimizerOpen(true)}
                 />
               )}
             </main>
@@ -344,48 +498,59 @@ export default function App() {
             />
           </>
         )}
-
-        {/* Zone Intelligence Bottom Sheet (slides up from bottom when any zone tapped) */}
-        {isBottomSheetOpen && selectedZone && (
-          <ZoneBottomSheet
-            zone={selectedZone}
-            onClose={() => setIsBottomSheetOpen(false)}
-            onSimulateAction={handleTriggerSimulation}
-            recommendedAction={actions[0]}
-            onOpenZPIEngine={() => setIsZPIEngineOpen(true)}
-          />
-        )}
-
-        {/* Multi-Modal Event State Fusion & ZPI Engine Modal */}
-        <ZPIEngineView
-          zones={zones}
-          isOpen={isZPIEngineOpen}
-          onClose={() => setIsZPIEngineOpen(false)}
-          onSimulateAction={handleTriggerSimulation}
-        />
-
-        {/* Interactive Simulation Sandbox Modal */}
-        <SimulationModal
-          isOpen={isSimulationOpen}
-          onClose={() => setIsSimulationOpen(false)}
-          action={activeSimAction}
-          onApplyIntervention={handleApplyIntervention}
-          zones={zones}
-          gates={gates}
-          transports={transports}
-        />
-
-        {/* Attendee Login / Access Modal */}
-        <AttendeeLoginModal
-          isOpen={isAttendeeLoginOpen}
-          onClose={() => setIsAttendeeLoginOpen(false)}
-          onContinueAsAttendee={() => {
-            setUserMode('attendee');
-            setCurrentTab('home');
-            setIsAttendeeLoginOpen(false);
-          }}
-        />
       </div>
+
+      {/* Global Shared Modals & Sheets — Fully active for both Desktop and Mobile */}
+      {isBottomSheetOpen && selectedZone && (
+        <ZoneBottomSheet
+          zone={selectedZone}
+          onClose={() => setIsBottomSheetOpen(false)}
+          onSimulateAction={handleTriggerSimulation}
+          recommendedAction={actions[0]}
+          onOpenZPIEngine={() => setIsZPIEngineOpen(true)}
+        />
+      )}
+
+      {/* Multi-Modal Event State Fusion & ZPI Engine Modal */}
+      <ZPIEngineView
+        zones={zones}
+        isOpen={isZPIEngineOpen}
+        onClose={() => setIsZPIEngineOpen(false)}
+        onSimulateAction={handleTriggerSimulation}
+      />
+
+      {/* Interactive Simulation Sandbox Modal */}
+      <SimulationModal
+        isOpen={isSimulationOpen}
+        onClose={() => setIsSimulationOpen(false)}
+        action={activeSimAction}
+        onApplyIntervention={handleApplyIntervention}
+        zones={zones}
+        gates={gates}
+        transports={transports}
+      />
+
+      {/* OR-Tools Prescriptive Constraint-Aware Optimizer Modal */}
+      <PrescriptiveOptimizerView
+        zones={zones}
+        gates={gates}
+        transports={transports}
+        isOpen={isOptimizerOpen}
+        onClose={() => setIsOptimizerOpen(false)}
+        onApplyIntervention={handleApplyPrescribedIntervention}
+        onApplyAllInterventions={handleApplyAllPrescriptions}
+      />
+
+      {/* Attendee Login / Access Modal */}
+      <AttendeeLoginModal
+        isOpen={isAttendeeLoginOpen}
+        onClose={() => setIsAttendeeLoginOpen(false)}
+        onContinueAsAttendee={() => {
+          setUserMode('attendee');
+          setCurrentTab('home');
+          setIsAttendeeLoginOpen(false);
+        }}
+      />
     </div>
   );
 }

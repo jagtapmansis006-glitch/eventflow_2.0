@@ -154,5 +154,56 @@ export interface SystemAlert {
   actionText: string;
 }
 
+export interface OptimizerConstraints {
+  maxAllowableWalkMeters: number;
+  maxShuttleFleet: number;
+  maxGateTurnstileTolerance: number; // percentage
+  maxBufferCapacity: number; // attendees
+  minFeasibilityThreshold: number; // percentage
+}
+
+export interface ConstraintAuditCheck {
+  name: string;
+  status: 'PASSED' | 'WARNING' | 'VIOLATED';
+  detail: string;
+  limit: string;
+  current: string;
+}
+
+export interface PrescribedIntervention {
+  id: string;
+  rank: number;
+  title: string;
+  category: 'gate_diversion' | 'transit_headway' | 'holding_buffer' | 'multi_agency';
+  agencyLever: 'Venue Ingress Gates' | 'Public Transit & Headways' | 'Peripheral Holding Zones' | 'Cross-Agency Joint Policy';
+  actionSummary: string;
+  targetEntity: string;
+  quantitativeDivert: string;
+  flowVolumeRate: number; // people / min
+  totalAttendeesAffected: number;
+  reliefImpact: string;
+  estimatedReliefPercent: number;
+  walkingDistanceMeters: number;
+  shuttlesRequired: number;
+  turnstileDemandPerMin: number;
+  turnstileCapacityPerMin: number;
+  constraintChecks: ConstraintAuditCheck[];
+  feasibilityScore: number; // 0 - 100
+  mathematicalRationale: string;
+  applied: boolean;
+}
+
+export interface MILPSolverResult {
+  status: 'OPTIMAL' | 'FEASIBLE' | 'INFEASIBLE';
+  solveTimeMs: number;
+  simplexPivots: number;
+  branchBoundNodes: number;
+  objectiveCost: number;
+  interventions: PrescribedIntervention[];
+  solverSummary: string;
+  activeConstraintsCount: number;
+  feasibleInterventionsCount: number;
+}
+
 export type TabType = 'home' | 'map' | 'alerts' | 'actions' | 'more';
 export type AttendeeTabType = 'home' | 'map' | 'guidance' | 'alerts' | 'more';

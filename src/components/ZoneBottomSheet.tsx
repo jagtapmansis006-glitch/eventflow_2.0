@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Zone, AIAction } from '../types';
 import { computeZPI } from '../engine/fusionEngine';
+import { ZonePredictiveChart } from './ZonePredictiveChart';
 
 interface ZoneBottomSheetProps {
   zone: Zone | null;
@@ -38,7 +39,7 @@ export const ZoneBottomSheet: React.FC<ZoneBottomSheetProps> = ({
   const isWarning = (zone.pressure >= 60 && zone.pressure < 80) || zpiData.riskLevel === 'HIGH' || zpiData.riskLevel === 'MODERATE';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-xs transition-opacity duration-200">
+    <div className="fixed inset-0 z-50 flex items-end lg:items-center justify-center p-0 lg:p-4 bg-black/75 backdrop-blur-xs transition-opacity duration-200">
       {/* Backdrop click to dismiss */}
       <div
         className="absolute inset-0"
@@ -46,10 +47,10 @@ export const ZoneBottomSheet: React.FC<ZoneBottomSheetProps> = ({
         aria-label="Dismiss sheet"
       />
 
-      {/* Slide-up sheet container with Frosted Glass styling */}
+      {/* Slide-up sheet container on mobile / centered modal on desktop */}
       <div
         id="zone-bottom-sheet"
-        className="relative w-full max-w-lg bg-black/60 backdrop-blur-2xl rounded-t-[32px] border-t border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.8)] p-6 pb-8 max-h-[85vh] overflow-y-auto z-10 animate-in slide-in-from-bottom duration-200"
+        className="relative w-full max-w-lg bg-black/90 backdrop-blur-2xl rounded-t-[32px] lg:rounded-3xl border border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.8)] lg:shadow-[0_20px_60px_rgba(0,0,0,0.9)] p-6 pb-8 max-h-[85vh] overflow-y-auto z-10 animate-in slide-in-from-bottom duration-200"
       >
         {/* Swipe drag handle */}
         <div className="flex justify-center mb-4">
@@ -154,60 +155,8 @@ export const ZoneBottomSheet: React.FC<ZoneBottomSheetProps> = ({
           </div>
         </div>
 
-        {/* Pressure Forecast Curve (Visual SVG graph) */}
-        <div className="mt-4 bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-white/70 flex items-center gap-1.5">
-              <TrendingUp className="w-4 h-4 text-blue-400" />
-              Pressure Forecast
-            </span>
-            <span className="text-[11px] font-mono text-white/40">Next 45 mins</span>
-          </div>
-
-          <div className="relative h-20 w-full pt-2">
-            {/* Threshold Line at 80% */}
-            <div className="absolute top-4 left-0 right-0 border-t border-dashed border-red-500/60 z-0">
-              <span className="absolute right-0 -top-3 text-[9px] font-mono text-red-400">
-                80% Critical Threshold
-              </span>
-            </div>
-
-            <svg className="w-full h-full overflow-visible" viewBox="0 0 320 60" fill="none">
-              <defs>
-                <linearGradient id="forecastGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#ef4444" stopOpacity="0.4" />
-                  <stop offset="100%" stopColor="#ef4444" stopOpacity="0.0" />
-                </linearGradient>
-              </defs>
-
-              {/* Area fill under curve */}
-              <path
-                d="M 10 40 Q 80 35, 160 25 T 310 8 L 310 55 L 10 55 Z"
-                fill="url(#forecastGradient)"
-              />
-
-              {/* Forecast Stroke Curve */}
-              <path
-                d="M 10 40 Q 80 35, 160 25 T 310 8"
-                stroke="#ef4444"
-                strokeWidth="3"
-                strokeLinecap="round"
-              />
-
-              {/* Point 1: Current */}
-              <circle cx="10" cy="40" r="4" fill="#38bdf8" stroke="#ffffff" strokeWidth="1.5" />
-              <text x="10" y="55" fill="#94a3b8" fontSize="9" textAnchor="middle">18:42</text>
-
-              {/* Point 2: +15m */}
-              <circle cx="160" cy="25" r="4" fill="#fbbf24" stroke="#ffffff" strokeWidth="1.5" />
-              <text x="160" y="55" fill="#94a3b8" fontSize="9" textAnchor="middle">19:00</text>
-
-              {/* Point 3: Critical Peak */}
-              <circle cx="310" cy="8" r="5" fill="#ef4444" stroke="#ffffff" strokeWidth="2" />
-              <text x="300" y="55" fill="#ef4444" fontSize="9" fontWeight="bold" textAnchor="middle">19:15 (94%)</text>
-            </svg>
-          </div>
-        </div>
+        {/* Pressure Forecast: Recharts 60-minute Predictive Trend based on Historical Flow Data */}
+        <ZonePredictiveChart zone={zone} />
 
         {/* ZPI (Zone Pressure Index) State Fusion Card */}
         <div className="mt-4 bg-black/60 border border-white/10 p-4 rounded-2xl backdrop-blur-md">

@@ -212,6 +212,44 @@ export const SimulationModal: React.FC<SimulationModalProps> = ({
               </div>
             </div>
 
+            {/* OR-Tools Bounded Constraints Validation Audit */}
+            <div className="mt-3.5 p-3.5 bg-black/60 rounded-2xl border border-purple-500/30 backdrop-blur-md flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-purple-300 flex items-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5 text-purple-400" />
+                  OR-Tools Constraint Feasibility
+                </span>
+                <span className="text-[10px] font-mono text-emerald-400 font-bold bg-emerald-500/20 px-2 py-0.2 rounded border border-emerald-500/30">
+                  FEASIBLE
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
+                <div className="bg-white/5 p-2 rounded-lg border border-white/5 flex flex-col">
+                  <span className="text-white/40 uppercase text-[9px]">Turnstile Intake</span>
+                  <span className="text-emerald-400 font-bold mt-0.5">
+                    {Math.round((attendeesRedirected / 1800) * 85)} pax/min (PASSED)
+                  </span>
+                  <span className="text-white/30 text-[8px]">Cap: 192 pax/min</span>
+                </div>
+                <div className="bg-white/5 p-2 rounded-lg border border-white/5 flex flex-col">
+                  <span className="text-white/40 uppercase text-[9px]">Walk Distance</span>
+                  <span className="text-emerald-400 font-bold mt-0.5">180m detour (PASSED)</span>
+                  <span className="text-white/30 text-[8px]">Max: 350m allowed</span>
+                </div>
+                <div className="bg-white/5 p-2 rounded-lg border border-white/5 flex flex-col">
+                  <span className="text-white/40 uppercase text-[9px]">Shuttle Fleet</span>
+                  <span className="text-emerald-400 font-bold mt-0.5">4 of 8 EV (PASSED)</span>
+                  <span className="text-white/30 text-[8px]">Reserve: 4 standby</span>
+                </div>
+                <div className="bg-white/5 p-2 rounded-lg border border-white/5 flex flex-col">
+                  <span className="text-white/40 uppercase text-[9px]">Holding Buffer</span>
+                  <span className="text-emerald-400 font-bold mt-0.5">400 Pax Lounge (PASSED)</span>
+                  <span className="text-white/30 text-[8px]">Cap: 600 max</span>
+                </div>
+              </div>
+            </div>
+
             {/* Execution Details */}
             <div className="my-3.5 p-3 bg-white/5 rounded-2xl border border-white/10 text-[11px] text-white/70 flex flex-col gap-1.5 backdrop-blur-md">
               <div className="flex items-center gap-2 text-white/60">

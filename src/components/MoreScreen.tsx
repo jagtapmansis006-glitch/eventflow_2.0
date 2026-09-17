@@ -20,6 +20,7 @@ interface MoreScreenProps {
   onToggleSimulating: () => void;
   onOpenAttendeeAccess?: () => void;
   onOpenZPIEngine?: () => void;
+  onOpenOptimizer?: () => void;
 }
 
 export const MoreScreen: React.FC<MoreScreenProps> = ({
@@ -28,6 +29,7 @@ export const MoreScreen: React.FC<MoreScreenProps> = ({
   onToggleSimulating,
   onOpenAttendeeAccess,
   onOpenZPIEngine,
+  onOpenOptimizer,
 }) => {
   return (
     <div
@@ -42,6 +44,35 @@ export const MoreScreen: React.FC<MoreScreenProps> = ({
           Platform telemetry, algorithmic pipeline & edge mesh
         </p>
       </div>
+
+      {/* Prescriptive Constraint-Aware Optimizer Entry */}
+      {onOpenOptimizer && (
+        <section className="bg-gradient-to-br from-purple-950/40 via-black/70 to-blue-950/30 backdrop-blur-xl rounded-2xl border border-purple-500/40 p-5 shadow-xl flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-purple-300 flex items-center gap-2">
+              <Cpu className="w-4 h-4 text-purple-400" />
+              Prescriptive Constraint-Aware Optimizer
+            </h3>
+            <span className="text-[10px] font-mono font-bold text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded-full border border-purple-500/30">
+              OR-TOOLS MILP
+            </span>
+          </div>
+
+          <p className="text-xs text-white/70 leading-relaxed">
+            Solves a bounded Mixed-Integer Linear Programming (MILP) model to determine mathematically feasible diversions across gate throughput, turnstile intake limits, allowable walking distances (≤350m), and available shuttle fleet counts (4/8).
+          </p>
+
+          <button
+            id="btn-more-open-optimizer"
+            onClick={onOpenOptimizer}
+            className="w-full mt-1 py-3 px-4 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-purple-600/30 min-h-[44px]"
+          >
+            <Cpu className="w-4 h-4" />
+            <span>Launch Prescriptive MILP Solver</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </section>
+      )}
 
       {/* Attendee Guidance Experience Mode */}
       {onOpenAttendeeAccess && (
@@ -110,7 +141,7 @@ export const MoreScreen: React.FC<MoreScreenProps> = ({
             XGBoost Regressor
           </span>
           <span className="px-2.5 py-1 bg-purple-600/20 text-purple-300 rounded-xl text-xs font-mono border border-purple-500/30">
-            Google OR-Tools
+            OR-Tools MILP
           </span>
           <span className="px-2.5 py-1 bg-emerald-600/20 text-emerald-300 rounded-xl text-xs font-mono border border-emerald-500/30">
             4.2x Faster Dispatch

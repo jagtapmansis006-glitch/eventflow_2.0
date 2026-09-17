@@ -1,5 +1,5 @@
 {
-  "name": "Remix EventFlow AI",
+  "name": "EventFlow AI",
   "description": "Multi-Modal Event State Fusion & ZPI Engine, EventFlow Connect Gateway, edge-native vision telemetry, and predictive dispatch command system.",
   "requestFramePermissions": [
     "geolocation"
